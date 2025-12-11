@@ -1,9 +1,49 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
+import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
+import { randomUUID } from "crypto";
 
 const NWS_API_BASE = "https://api.weather.gov";
 const USER_AGENT = "weather-app/1.0";
+
+// Authorization helper
+function validateAuthorizationHeader(authHeader: string | undefined): boolean {
+    if (!authHeader) {
+        return false;
+    }
+
+    // Check if header starts with "Bearer "
+    if (!authHeader.startsWith("Bearer ")) {
+        return false;
+    }
+
+    // Extract token (everything after "Bearer ")
+    const token = authHeader.substring(7);
+
+    // For now, just check that a token exists
+    if (!token || token.trim() === "") {
+        return false;
+    }
+
+    return true;
+}
+
+// Express middleware for authorization
+function authMiddleware(req: Request, res: Response, next: NextFunction) {
+    const authHeader = req.headers.authorization;
+
+    if (!validateAuthorizationHeader(authHeader)) {
+        res.status(401).json({
+            error: "Unauthorized",
+            message: "Valid Authorization header with Bearer token is required"
+        });
+        return;
+    }
+
+    next();
+}
 
 // Create server instance
 const server = new McpServer({
@@ -214,11 +254,69 @@ interface ForecastResponse {
     };
 }
 
+// Parse command line arguments
+function parseArgs() {
+    const args = process.argv.slice(2);
+    let port = 3002;
+
+    for (let i = 0; i < args.length; i++) {
+        if (args[i].startsWith("--port=")) {
+            port = parseInt(args[i].split("=")[1], 10);
+        }
+    }
+
+    return { port };
+}
+
 // Start server
 async function main() {
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error("Weather MCP Server running on stdio");
+    const { port } = parseArgs();
+
+    const app = express();
+
+    // Enable CORS
+    app.use(cors({
+        origin: "*",
+        credentials: true
+    }));
+
+    app.use(express.json());
+
+    // Health check endpoint (no auth required)
+    app.get("/health", (_req, res) => {
+        res.json({ status: "ok", service: "weather-mcp" });
+    });
+
+    // Store transports by session ID
+    const transports = new Map<string, StreamableHTTPServerTransport>();
+
+    // MCP endpoint with authorization
+    app.use("/mcp", authMiddleware, async (req: Request, res: Response) => {
+        const sessionId = req.headers['mcp-session-id'] as string || randomUUID();
+
+        let transport = transports.get(sessionId);
+
+        if (!transport) {
+            transport = new StreamableHTTPServerTransport({
+                sessionIdGenerator: () => sessionId
+            });
+
+            await server.connect(transport);
+            transports.set(sessionId, transport);
+
+            // Clean up transport after 5 minutes of inactivity
+            setTimeout(() => {
+                transports.delete(sessionId);
+            }, 5 * 60 * 1000);
+        }
+
+        await transport.handleRequest(req, res, req.body);
+    });
+
+    app.listen(port, () => {
+        console.error(`Weather MCP Server running on http://localhost:${port}`);
+        console.error(`MCP endpoint: http://localhost:${port}/mcp`);
+    });
 }
 
 main().catch((error) => {
