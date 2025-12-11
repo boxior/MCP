@@ -1,0 +1,23 @@
+services:
+  middleware:
+    build:
+      context: .
+      dockerfile: mcp-middleware/Dockerfile
+    container_name: mcp-middleware
+    ports:
+      - "3001:3001"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - WEATHER_SERVER_PATH=./weather/build/index.js
+    restart: unless-stopped
+
+  react-app:
+    build:
+      context: ./react-app
+      dockerfile: Dockerfile
+    container_name: react-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - middleware
+    restart: unless-stopped

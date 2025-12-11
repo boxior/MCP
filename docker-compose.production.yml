@@ -1,0 +1,40 @@
+# Production docker-compose (optional - for testing production builds locally)
+# For actual cloud deployment, deploy each service separately
+
+services:
+  middleware:
+    build:
+      context: .
+      dockerfile: mcp-middleware/Dockerfile.production
+    container_name: mcp-middleware-prod
+    ports:
+      - "3001:3001"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  react-app:
+    build:
+      context: ./react-app
+      dockerfile: Dockerfile.production
+    container_name: react-app-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+    depends_on:
+      middleware:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3

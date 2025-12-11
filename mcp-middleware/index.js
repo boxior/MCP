@@ -24,9 +24,12 @@ app.use((req, res, next) => {
 // Initialize MCP client
 let mcpClient;
 async function initializeMCP() {
+    // Use environment variable for weather server path, default to local path
+    const weatherServerPath = process.env.WEATHER_SERVER_PATH || '../weather/build/index.js';
+
     const transport = new StdioClientTransport({
         command: 'node',
-        args: ['../weather/build/index.js']
+        args: [weatherServerPath]
     });
 
     mcpClient = new Client({
@@ -155,9 +158,15 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'MCP middleware is healthy' });
+});
+
 // Start server
 initializeMCP().then(() => {
-    app.listen(3001, () => {
-        console.log('Backend running on port 3001');
+    const PORT = process.env.PORT || 3001;
+    app.listen(PORT, () => {
+        console.log(`Backend running on port ${PORT}`);
     });
 });

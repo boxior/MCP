@@ -78,3 +78,14 @@ npm run dev
 
 - `Chatbot.tsx` - Basic chatbot component
 - `ChatbotUi.tsx` - Enhanced UI with professional chat interface
+
+## Deployment
+
+For production deployment to cloud platforms:
+- See `DEPLOYMENT-PRODUCTION.md` for detailed deployment guide
+- See `ARCHITECTURE.md` for system architecture overview
+
+**Quick Deploy**:
+- Frontend (Vercel): Free, unlimited
+- Backend (Render): Free, 750 hrs/month
+- Total: $0/month

@@ -1,0 +1,44 @@
+# Production Dockerfile for mcp-middleware (includes weather server)
+# This bundles both middleware and weather MCP server since they communicate via stdio
+# Deploy this single container to Render/Railway/Fly.io
+
+FROM node:20-alpine AS base
+
+# Build weather MCP server
+FROM base AS weather-builder
+WORKDIR /weather
+
+COPY weather/package*.json ./
+RUN npm ci --only=production
+
+COPY weather/tsconfig.json ./
+COPY weather/src ./src
+
+RUN npm install -D typescript @types/node && \
+    npx tsc && \
+    chmod 755 build/index.js
+
+# Build final image with middleware + weather
+FROM base AS runner
+WORKDIR /app
+
+# Copy middleware
+COPY mcp-middleware/package*.json ./
+RUN npm ci --only=production
+
+COPY mcp-middleware/index.js ./
+
+# Copy built weather server
+COPY --from=weather-builder /weather /app/weather
+
+# Set environment variable for weather server path
+ENV WEATHER_SERVER_PATH=./weather/build/index.js
+ENV NODE_ENV=production
+
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+CMD ["node", "index.js"]
