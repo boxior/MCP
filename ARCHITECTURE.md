@@ -20,24 +20,21 @@
 │                     Port 3001                               │
 │  ┌───────────────────────────────────────────────────────┐ │
 │  │  1. Receives chat messages                            │ │
-│  │  2. Lists available MCP tools                         │ │
+│  │  2. Lists available MCP tools via HTTP                │ │
 │  │  3. Sends to Claude API with tools                    │ │
-│  │  4. Executes tool calls via MCP client                │ │
+│  │  4. Executes tool calls via MCP HTTP client           │ │
 │  │  5. Returns final response                            │ │
 │  └───────────────────────────────────────────────────────┘ │
-│                                                             │
-│  ┌──────────────┐              ┌──────────────────────┐   │
-│  │  MCP Client  │─────stdio───▶│  Weather MCP Server  │   │
-│  │              │              │  (bundled inside)    │   │
-│  └──────────────┘              └──────────────────────┘   │
 │         │                                                   │
 └─────────┼───────────────────────────────────────────────────┘
-          │ HTTPS
-          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    CLAUDE API                               │
-│              (Anthropic Cloud)                              │
-└─────────────────────────────────────────────────────────────┘
+          │ HTTPS                    │ HTTP + Auth Header
+          ▼                          ▼
+┌──────────────────────┐   ┌─────────────────────────────────┐
+│    CLAUDE API        │   │   WEATHER MCP SERVER            │
+│ (Anthropic Cloud)    │   │   (HTTP Standalone Service)     │
+└──────────────────────┘   │   Port 3002                     │
+                           │   Authorization: Bearer token   │
+                           └─────────────────────────────────┘
 ```
 
 ## Communication Flow
@@ -51,9 +48,9 @@ User → React App → POST /api/chat → Middleware
 ```
 Middleware:
   1. Receive messages
-  2. Get tools from MCP (stdio)
+  2. Get tools from MCP (HTTP)
   3. Call Claude API with tools
-  4. If tool_use: Execute via MCP
+  4. If tool_use: Execute via MCP HTTP client
   5. Get final response
   6. Stream back to React
 ```
@@ -62,9 +59,9 @@ Middleware:
 ```
 Claude API → "tool_use: get_forecast"
      ↓
-Middleware → MCP Client (stdio) → Weather Server
+Middleware → MCP HTTP Client (with Auth header) → Weather Server
      ↓
-Weather Server → Returns forecast data
+Weather Server → Validates auth → Returns forecast data
      ↓
 Middleware → Sends tool result to Claude
      ↓
@@ -77,48 +74,48 @@ Middleware → Streams response to React App
 
 ### Local Development
 ```
-┌─────────────────────────────────────┐
-│     Docker Compose                  │
-│  ┌─────────┐      ┌──────────────┐ │
-│  │ React   │      │  Middleware  │ │
-│  │ App     │─────▶│  + Weather   │ │
-│  │ :3000   │      │  :3001       │ │
-│  └─────────┘      └──────────────┘ │
-└─────────────────────────────────────┘
+┌───────────────────────────────────────────────┐
+│           Docker Compose (3 services)         │
+│  ┌─────────┐   ┌──────────────┐  ┌─────────┐│
+│  │ React   │   │  Middleware  │  │ Weather ││
+│  │ App     │──▶│  :3001       │─▶│ MCP     ││
+│  │ :3000   │   │              │  │ :3002   ││
+│  └─────────┘   └──────────────┘  └─────────┘│
+│                      │ HTTP + Auth             │
+│                      └────────────────────────┘
+└───────────────────────────────────────────────┘
 ```
 
-### Production (Separate Services)
+### Production (3 Separate Services)
 ```
-┌────────────┐         ┌─────────────────────┐
-│   Vercel   │         │      Render         │
-│            │         │                     │
-│  React App │────────▶│   Middleware        │
-│  (Next.js) │  HTTPS  │   + Weather         │
-│            │         │   (stdio bundled)   │
-└────────────┘         └─────────────────────┘
-```
-
-### Why Weather Must Be Bundled
-
-❌ **Cannot work**:
-```
-Render Instance 1     HTTP      Render Instance 2
-┌────────────┐   ────────▶   ┌─────────────┐
-│ Middleware │               │   Weather   │
-└────────────┘               └─────────────┘
-       stdio communication doesn't work over network!
+┌────────────┐    ┌──────────────┐    ┌──────────────┐
+│   Vercel   │    │    Render    │    │    Render    │
+│            │    │              │    │              │
+│  React App │───▶│  Middleware  │───▶│   Weather    │
+│  (Next.js) │    │  :3001       │    │   MCP :3002  │
+│            │    │              │    │   + Auth     │
+└────────────┘    └──────────────┘    └──────────────┘
+     HTTPS              HTTPS              HTTP + Bearer Token
 ```
 
-✅ **Must work**:
+### New Architecture Benefits
+
+✅ **Advantages of HTTP Transport**:
 ```
-Render Instance 1
-┌─────────────────────────────┐
-│  Middleware                 │
-│    │                        │
-│    │ stdio (in-process)     │
-│    ▼                        │
-│  Weather Server             │
-└─────────────────────────────┘
+1. Services can be deployed independently
+2. Each service scales independently
+3. Weather MCP server can be reused by other clients
+4. Easier to monitor and debug
+5. Better security with authorization headers
+```
+
+✅ **How it works now**:
+```
+┌──────────────────┐      HTTP + Auth      ┌──────────────────┐
+│   Middleware     │────────────────────────▶│  Weather MCP    │
+│   (Render)       │  Bearer token           │  (Render)       │
+└──────────────────┘                        └──────────────────┘
+     Separate containers, HTTP communication over network
 ```
 
 ## Files Structure
@@ -138,20 +135,24 @@ Render Instance 1
 | Component | Technology | Port |
 |-----------|-----------|------|
 | Frontend | Next.js, React, TypeScript | 3000 |
-| Middleware | Node.js, Express, Anthropic SDK | 3001 |
-| MCP Client | @modelcontextprotocol/sdk | - |
-| Weather Server | TypeScript, Zod, MCP SDK | stdio |
+| Middleware | Node.js, Express, Anthropic SDK, MCP HTTP Client | 3001 |
+| Weather MCP | TypeScript, Express, Zod, MCP SDK | 3002 |
 | AI Model | Claude Sonnet 4 | - |
 
 ## Environment Variables
 
 ### React App
-- `NEXT_PUBLIC_API_URL` - Middleware URL
+- `NEXT_PUBLIC_MCP_MIDDLEWARE_URL` - Middleware URL (e.g., https://middleware.onrender.com)
 
 ### Middleware
 - `ANTHROPIC_API_KEY` - Claude API key
-- `WEATHER_SERVER_PATH` - Path to weather server
+- `MCP_SERVER_URL` - Weather MCP server URL (e.g., http://weather:3002/mcp or https://weather-mcp.onrender.com/mcp)
+- `MCP_SERVER_API_KEY` - Bearer token for weather MCP authentication (default: demo-api-key-123)
 - `PORT` - Server port (default 3001)
+
+### Weather MCP Server
+- `PORT` - Server port (default 3002)
+- `NODE_ENV` - Environment (development/production)
 
 ## Security Considerations
 

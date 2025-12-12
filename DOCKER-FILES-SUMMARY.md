@@ -175,7 +175,7 @@ Health:    http://localhost:3001/health
    - Docker Build Context: .
 4. Environment Variables:
    - ANTHROPIC_API_KEY=your_key
-   - WEATHER_SERVER_PATH=./weather/build/index.js
+   - MCP_SERVER_PATH=./weather/build/index.js
 5. Deploy
 6. Copy URL: https://mcp-middleware-xyz.onrender.com
 ```
@@ -186,7 +186,7 @@ Health:    http://localhost:3001/health
 1. Import GitHub repo
 2. Root Directory: react-app
 3. Environment Variables:
-   - NEXT_PUBLIC_API_URL=https://mcp-middleware-xyz.onrender.com
+   - NEXT_PUBLIC_MCP_MIDDLEWARE_URL=https://mcp-middleware-xyz.onrender.com
 4. Deploy
 ```
 
@@ -230,11 +230,11 @@ curl http://localhost:3000
 1. **Weather Server Location**
    - Development: `../weather/build/index.js`
    - Production: `./weather/build/index.js`
-   - Controlled by `WEATHER_SERVER_PATH` env var
+   - Controlled by `MCP_SERVER_PATH` env var
 
 2. **API URL**
    - Development: `http://localhost:3001`
-   - Production: Set via `NEXT_PUBLIC_API_URL`
+   - Production: Set via `NEXT_PUBLIC_MCP_MIDDLEWARE_URL`
 
 3. **CORS**
    - Development: `http://localhost:3000`
@@ -250,12 +250,12 @@ curl http://localhost:3000
 
 ### "Connection closed" error
 - Weather server not found
-- Check `WEATHER_SERVER_PATH` is correct
+- Check `MCP_SERVER_PATH` is correct
 - Check weather built successfully (look for build/ folder)
 
 ### "Cannot connect to backend"
 - Check CORS settings
-- Check `NEXT_PUBLIC_API_URL` is set correctly
+- Check `NEXT_PUBLIC_MCP_MIDDLEWARE_URL` is set correctly
 - Check both services are running
 
 ### "Health check failed"

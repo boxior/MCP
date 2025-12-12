@@ -35,7 +35,7 @@ Internet → React App (Port 3000) → Middleware (Port 3001) → Weather MCP (s
 
 # 6. Environment Variables:
 #    ANTHROPIC_API_KEY=your_key_here
-#    WEATHER_SERVER_PATH=./weather/build/index.js
+#    MCP_SERVER_PATH=./weather/build/index.js
 
 # 7. Click "Create Web Service"
 # 8. Copy the URL: https://mcp-middleware-xyz.onrender.com
@@ -101,7 +101,7 @@ fly status
 #    Output Directory: .next
 
 # 5. Environment Variables:
-#    NEXT_PUBLIC_API_URL=https://mcp-middleware-xyz.onrender.com
+#    NEXT_PUBLIC_MCP_MIDDLEWARE_URL=https://mcp-middleware-xyz.onrender.com
 
 # 6. Deploy
 ```
@@ -128,14 +128,14 @@ fly status
 | Variable | Value | Required |
 |----------|-------|----------|
 | `ANTHROPIC_API_KEY` | Your API key | Yes |
-| `WEATHER_SERVER_PATH` | `./weather/build/index.js` | Yes |
+| `MCP_SERVER_PATH` | `./weather/build/index.js` | Yes |
 | `PORT` | `3001` | No (default) |
 | `NODE_ENV` | `production` | No |
 
 ### React App Service
 | Variable | Value | Required |
 |----------|-------|----------|
-| `NEXT_PUBLIC_API_URL` | Your middleware URL | Yes |
+| `NEXT_PUBLIC_MCP_MIDDLEWARE_URL` | Your middleware URL | Yes |
 | `NODE_ENV` | `production` | No |
 
 ---
@@ -191,7 +191,7 @@ docker-compose -f docker-compose.production.yml up --build
 - [ ] Deploy middleware with weather bundled (Render/Railway/Fly.io)
 - [ ] Get middleware URL and test `/health` endpoint
 - [ ] Deploy frontend (Vercel/Render)
-- [ ] Set `NEXT_PUBLIC_API_URL` to middleware URL
+- [ ] Set `NEXT_PUBLIC_MCP_MIDDLEWARE_URL` to middleware URL
 - [ ] Update CORS in middleware to allow frontend URL
 - [ ] Test end-to-end: Ask for weather in the UI
 - [ ] Monitor logs for errors
@@ -226,7 +226,7 @@ docker-compose -f docker-compose.production.yml up --build
 - View logs on hosting platform
 
 ### Frontend can't connect to backend
-- Check NEXT_PUBLIC_API_URL is correct
+- Check NEXT_PUBLIC_MCP_MIDDLEWARE_URL is correct
 - Check CORS includes your frontend URL
 - Use browser DevTools → Network tab
 

@@ -1,39 +1,23 @@
-# Production Dockerfile for mcp-middleware (includes weather server)
-# This bundles both middleware and weather MCP server since they communicate via stdio
-# Deploy this single container to Render/Railway/Fly.io
+# Production Dockerfile for mcp-middleware
+# Connects to weather MCP server via HTTP (deployed separately)
+# Deploy this to Render/Railway/Fly.io
 
 FROM node:20-alpine AS base
 
-# Build weather MCP server
-FROM base AS weather-builder
-WORKDIR /weather
-
-COPY weather/package*.json ./
-RUN npm ci --only=production
-
-COPY weather/tsconfig.json ./
-COPY weather/src ./src
-
-RUN npm install -D typescript @types/node && \
-    npx tsc && \
-    chmod 755 build/index.js
-
-# Build final image with middleware + weather
-FROM base AS runner
 WORKDIR /app
 
-# Copy middleware
+# Copy package files
 COPY mcp-middleware/package*.json ./
+
+# Install production dependencies only
 RUN npm ci --only=production
 
+# Copy application code
 COPY mcp-middleware/index.js ./
 
-# Copy built weather server
-COPY --from=weather-builder /weather /app/weather
-
-# Set environment variable for weather server path
-ENV WEATHER_SERVER_PATH=./weather/build/index.js
+# Set environment variables
 ENV NODE_ENV=production
+ENV PORT=3001
 
 EXPOSE 3001
 

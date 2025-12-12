@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import cors from 'cors';
 
 const app = express();
@@ -12,12 +12,19 @@ app.use(cors())
 // Initialize MCP client
 let mcpClient;
 async function initializeMCP() {
-    // Use environment variable for weather server path, default to local path
-    const weatherServerPath = process.env.WEATHER_SERVER_PATH || '../weather/build/index.js';
+    // Use environment variable for weather server URL
+    const weatherServerUrl = process.env.MCP_SERVER_URL || 'http://localhost:3002/mcp';
+    const weatherApiKey = process.env.MCP_SERVER_API_KEY || 'demo-api-key-123';
 
-    const transport = new StdioClientTransport({
-        command: 'node',
-        args: [weatherServerPath]
+    console.log('Connecting to MCP server at:', weatherServerUrl);
+    console.log('Using API key:', weatherApiKey ? '***' + weatherApiKey.slice(-4) : 'none');
+
+    const transport = new StreamableHTTPClientTransport(weatherServerUrl, {
+        requestInit: {
+            headers: {
+                'Authorization': `Bearer ${weatherApiKey}`
+            }
+        }
     });
 
     mcpClient = new Client({
@@ -28,7 +35,7 @@ async function initializeMCP() {
     });
 
     await mcpClient.connect(transport);
-    console.log('MCP server connected');
+    console.log('MCP server connected via HTTP to:', weatherServerUrl);
 }
 
 // Initialize Anthropic client
