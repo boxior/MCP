@@ -39,9 +39,9 @@ This guide covers deploying all three services separately:
 3. Connect your GitHub repository
 4. Configure:
    - **Name**: `weather-mcp-server`
-   - **Root Directory**: `weather`
+   - **Root Directory**: Leave blank (repo root)
    - **Environment**: `Docker`
-   - **Dockerfile Path**: `Dockerfile.production`
+   - **Dockerfile Path**: `Dockerfile.weather.production`
    - **Plan**: `Free`
 5. Add Environment Variables:
    - Key: `PORT`
@@ -49,15 +49,17 @@ This guide covers deploying all three services separately:
 6. Click **Create Web Service**
 7. **Note the URL** (e.g., `https://weather-mcp-server.onrender.com`)
 
+**Note**: We use `Dockerfile.weather.production` at the repo root instead of `weather/Dockerfile.production` because Render builds from the repository root.
+
 ### Step 2: Deploy Middleware
 
 1. Click **New +** → **Web Service**
 2. Connect your GitHub repository
 3. Configure:
    - **Name**: `mcp-middleware`
-   - **Root Directory**: `.` (root)
+   - **Root Directory**: Leave blank (repo root)
    - **Environment**: `Docker`
-   - **Dockerfile Path**: `mcp-middleware/Dockerfile.production`
+   - **Dockerfile Path**: `Dockerfile.middleware.production`
    - **Plan**: `Free`
 4. Add Environment Variables:
    - Key: `ANTHROPIC_API_KEY`
