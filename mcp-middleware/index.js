@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import cors from 'cors';
+import { PREFILTER_CONFIG, checkIfWeatherQuery, generateRejectionMessage } from './preFilter.js';
 
 const app = express();
 app.use(express.json());
@@ -56,6 +57,48 @@ app.post('/api/chat', async (req, res) => {
     console.log("req.body", req.body);
 
     try {
+        // STEP 1: Extract last user message for pre-filtering
+        const lastUserMessage = messages
+            .filter(m => m.role === 'user')
+            .pop();
+
+        if (!lastUserMessage) {
+            throw new Error('No user message found');
+        }
+
+        // STEP 2: Check if it's a weather query (only if pre-filter is enabled)
+        if (PREFILTER_CONFIG.ENABLED) {
+            const classification = await checkIfWeatherQuery(anthropic, lastUserMessage.content);
+
+            console.log('Query classification:', {
+                query: lastUserMessage.content,
+                isWeather: classification.isWeatherQuery,
+                confidence: classification.confidence
+            });
+
+            // STEP 3: If not weather-related, return rejection message
+            if (!classification.isWeatherQuery) {
+                // Use same streaming format for consistency
+                res.setHeader('Content-Type', 'text/event-stream');
+                res.setHeader('Cache-Control', 'no-cache');
+                res.setHeader('Connection', 'keep-alive');
+
+                const rejectionMessage = generateRejectionMessage();
+                const chunkSize = PREFILTER_CONFIG.REJECTION_CHUNK_SIZE;
+
+                // Stream rejection message in chunks (matches existing format)
+                for (let i = 0; i < rejectionMessage.length; i += chunkSize) {
+                    const chunk = rejectionMessage.slice(i, i + chunkSize);
+                    res.write(`data: ${JSON.stringify({ delta: { text: chunk } })}\n\n`);
+                }
+
+                res.write(`data: [DONE]\n\n`);
+                res.end();
+                return;  // EXIT HERE - SAVE TOKENS!
+            }
+        }
+
+        // STEP 4: Weather query - continue with existing flow
         // Get available tools from MCP server
         const toolsList = await mcpClient.listTools();
         console.log('Available tools:', toolsList.tools.map(t => t.name));
