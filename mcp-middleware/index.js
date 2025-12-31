@@ -43,6 +43,13 @@ const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY
 });
 
+// Validate API key is set
+if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('ERROR: ANTHROPIC_API_KEY environment variable is not set!');
+    console.error('Please create a .env file in the mcp-middleware directory with ANTHROPIC_API_KEY=your-key');
+    process.exit(1);
+}
+
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
     const { messages } = req.body;
