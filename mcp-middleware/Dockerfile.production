@@ -13,7 +13,7 @@ COPY mcp-middleware/package*.json ./
 RUN npm ci --only=production
 
 # Copy application code
-COPY mcp-middleware/index.js ./
+COPY mcp-middleware/*.js ./
 
 # Set environment variables
 ENV NODE_ENV=production
