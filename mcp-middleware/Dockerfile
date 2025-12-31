@@ -9,7 +9,7 @@ COPY mcp-middleware/package*.json ./
 RUN npm ci --only=production
 
 # Copy middleware source code
-COPY mcp-middleware/index.js ./
+COPY mcp-middleware/*.js ./
 
 # Expose port
 EXPOSE 3001
