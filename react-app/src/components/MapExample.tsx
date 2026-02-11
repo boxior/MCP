@@ -1,25 +1,27 @@
 "use client"
 
 import React, {useEffect} from "react";
+import {initMap} from "@/src/components/example";
 
 
 export const MapExample = () => {
     useEffect( () => {
         (async () => {
-            // Dynamically import the library only on the client side
-            const {createMap} = await import("@milemaker/milemaker-js");
-
-            const map = await createMap({
-                container: "map",
-                accessToken: process.env.NEXT_PUBLIC_MILEMAKER_ACCESS_TOKEN ?? "",
+            initMap().then(({addRoute, removeRoute}) => {
+                document.getElementById("ADD_BUTTON_ID")?.addEventListener("click", addRoute);
+                document.getElementById("REMOVE_BUTTON_ID")?.addEventListener("click", removeRoute);
             });
-            console.log("map", map);
-            map.controls.createBaseLayerControl();
-            map.controls.createOverlayLayerControl();
         })()
     }, [])
 
     return (
-        <div id={"map"} style={{width: 600, height: 600}}></div>
+        <div>
+            <div id={"map"} style={{width: 600, height: 600}}/>
+
+            <button id="ADD_BUTTON_ID">Add</button>
+            <br/>
+            <button id="REMOVE_BUTTON_ID">Remove</button>
+        </div>
+
     )
 }
