@@ -30,7 +30,7 @@ async function initializeMCP() {
 
     mcpClient = new Client({
         name: 'chatbot-backend',
-        version: '1.0.0'
+        version: '1.0.0',
     }, {
         capabilities: {}
     });

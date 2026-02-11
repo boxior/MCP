@@ -1,8 +1,13 @@
-import Chatbot from "@/src/components/Chatbot";
 import ChatbotUi from "@/src/components/ChatbotUi";
+import {MapExample} from "@/src/components/MapExample";
 
 export default function Home() {
+
     return (
-        <ChatbotUi/>
+        <div>
+            <MapExample/>
+            <ChatbotUi/>
+        </div>
+
     );
 }

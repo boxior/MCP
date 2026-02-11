@@ -3,7 +3,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 
 const NWS_API_BASE = "https://api.weather.gov";
 const USER_AGENT = "weather-app/1.0";
